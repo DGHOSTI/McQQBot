@@ -1,0 +1,10 @@
+# 复制本文件为 config.yaml 并填入你自己的机器人凭据。
+# 注意：config.yaml 已被 .gitignore 忽略，请勿提交真实凭据。
+appid: "你的机器人AppID"
+secret: "你的机器人AppSecret"
+
+# ===== MC 机器人配置(可选) =====
+# 默认检测的服务器地址；不配置则需在指令中显式带地址，例如: /server mc.example.com
+# default_server: "mc.example.com"
+# 服务器状态查询超时(秒)
+mc_timeout: 5
