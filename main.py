@@ -38,7 +38,12 @@ def main() -> None:
     )
 
     intents = botpy.Intents(public_messages=True)
-    client = McBotClient(dispatcher=dispatcher, intents=intents)
+    client = McBotClient(
+        dispatcher=dispatcher,
+        admin_user_openids=config.admin_user_openids,
+        admin_group_openids=config.admin_group_openids,
+        intents=intents,
+    )
     client.run(appid=config.app_id, secret=config.secret)
 
 

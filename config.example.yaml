@@ -8,3 +8,13 @@ secret: "你的机器人AppSecret"
 # default_server: "mc.example.com"
 # 服务器状态查询超时(秒)
 mc_timeout: 5
+
+# ===== 管理员（预留：供未来「管理员专属」指令使用） =====
+# 当前全部指令普通用户即可使用。管理员指令上线后，在此登记管理员账号：
+# - admin_user_openids:  私聊管理员，填机器人收到的「user_openid」
+# - admin_group_openids: 群管理员，填机器人收到的「member_openid」
+# 可先用任意指令触发后，从日志 [指令] ... 发送者=xxx 里查到自己的 openid。
+# admin_user_openids:
+#   - "私聊管理员user_openid"
+# admin_group_openids:
+#   - "群管理员member_openid"

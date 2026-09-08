@@ -19,20 +19,43 @@ class McBotClient(botpy.Client):
 
     DEDUP_WINDOW = 5.0   # 同一 msg_id 在该秒数内只处理一次
 
-    def __init__(self, dispatcher: CommandDispatcher, *args, **kwargs):
+    def __init__(self, dispatcher: CommandDispatcher,
+                 admin_user_openids=frozenset(), admin_group_openids=frozenset(),
+                 *args, **kwargs):
         # 禁止 botpy 默认把日志写成 cwd 下的 botpy.log，统一由 logging_setup 管理
         kwargs.setdefault("ext_handlers", False)
         super().__init__(*args, **kwargs)
         self._dispatcher = dispatcher
+        self._admin_user_openids = set(admin_user_openids)     # 私聊管理员
+        self._admin_group_openids = set(admin_group_openids)   # 群管理员
         self._seen_group_ids: dict[str, float] = {}
 
-    async def _handle(self, text: str, kind: str, msg_id: str, **target) -> None:
-        """统一入口：把文本交给分发器，出错时兜底回复。"""
+    def _is_admin(self, kind: str, sender_openid: str | None) -> bool:
+        if not sender_openid:
+            return False
+        if kind == "group":
+            return sender_openid in self._admin_group_openids
+        return sender_openid in self._admin_user_openids
+
+    async def _handle(self, text: str, kind: str, msg_id: str,
+                      sender_openid: str | None, **target) -> None:
+        """统一入口：解析指令 → 权限校验 → 分发，出错时兜底回复。"""
         channel = ReplyChannel(self.api, kind, msg_id, **target)
         name, args = self._dispatcher.parse(text)
         if name is None:
             return
-        _logger.info("[指令] %s 参数=%r", name, args)
+        _logger.info("[指令] %s 参数=%r (发送者=%s)", name, args, sender_openid)
+
+        # 管理员专属指令：非管理员拒绝执行
+        if (self._dispatcher.requires_admin(name)
+                and not self._is_admin(kind, sender_openid)):
+            _logger.info("[权限] 拒绝非管理员使用 /%s", name)
+            try:
+                await channel.send_text("该命令仅管理员可用")
+            except Exception:
+                pass
+            return
+
         try:
             await self._dispatcher.dispatch(channel, text)
         except Exception as error:
@@ -69,6 +92,7 @@ class McBotClient(botpy.Client):
         self._seen_group_ids[msg_id] = now
         await self._handle(
             message.content, "group", msg_id,
+            sender_openid=getattr(message.author, "member_openid", None),
             group_openid=message.group_openid,
         )
 
@@ -77,6 +101,7 @@ class McBotClient(botpy.Client):
                      getattr(message.author, "user_openid", None), message.content)
         await self._handle(
             message.content, "c2c", message.id,
+            sender_openid=getattr(message.author, "user_openid", None),
             openid=message.author.user_openid,
         )
 

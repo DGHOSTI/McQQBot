@@ -24,6 +24,7 @@ class Command:
     aliases: tuple[str, ...] = field(default_factory=tuple)
     usage: str = ""                            # 参数用法，如 "[地址]"
     description: str = ""                      # 一句话说明
+    permission: str = "user"                   # 权限："user" 普通 / "admin" 管理员
 
     def help_line(self) -> str:
         param = f" {self.usage}" if self.usage else ""
@@ -76,9 +77,21 @@ class CommandDispatcher:
         await self._commands[name].handler(channel, args)
         return True
 
+    # -- 权限 ----------------------------------------------------------
+    def requires_admin(self, name: str) -> bool:
+        """该指令是否需要管理员权限。"""
+        command = self._commands.get(name)
+        return bool(command and command.permission == "admin")
+
     # -- 帮助文本 ------------------------------------------------------
     def help_text(self) -> str:
-        return "\n".join(cmd.help_line() for cmd in self._commands.values())
+        # 仅列出普通用户可用的指令，管理员专属指令不出现在帮助中
+        lines = [
+            cmd.help_line()
+            for cmd in self._commands.values()
+            if cmd.permission != "admin"
+        ]
+        return "\n".join(lines)
 
 
 __all__ = ["Command", "CommandDispatcher", "CommandHandler"]
